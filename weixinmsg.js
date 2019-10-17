@@ -1,53 +1,100 @@
-const formatMsg = require('./fmtwxmsg');
 
-function help() {
-    return `这是一个消息回复测试程序，会把消息原样返回，但是目前不支持视频类型的消息`;
+
+
+
+const formatMsg=require('./fmtwxmsg');
+
+function help(){
+    //字符串形式返回帮助信息
+    //还可以是以读取文件的形式来返回
+    return '你好，这是一测试号，目前会以原样的信息返回用户输入的信息，暂不支持视频类型';
+
 }
-
-function userMsg(wxmsg, retmsg) {
-    /*
-        检测是否为文本消息，如果是文本消息则先要检测是不是支持的关键词回复。
-    */
-    if (wxmsg.MsgType == 'text') {
-        if (wxmsg.Content == 'help' || wxmsg.Content == '?' || wxmsg.Content == '？') {
-            retmsg.msg = help();
-            retmsg.msgtype = 'text';
-            return formatMsg(retmsg);
-        } else if(wxmsg.Content == 'who'){
-            retmsg.msg = '学生基本信息：姓名-孙童；学号-2017011949；班级-6班';
-            retmsg.msgtype = 'text';
-            return formatMsg(retmsg);
-        }
-        else if (wxmsg.Content == 'hello' || wxmsg.Content == '你好'){
-
-            retmsg.msg = '你好，你可以输入一些关键字测试消息回复，输入help/?获取帮助';
-            retmsg.msgtype = 'text';
-            return formatMsg(retmsg);
-
-        } else {
-            retmsg.msg = wxmsg.Content;
-            retmsg.msgtype = wxmsg.MsgType;
-            return formatMsg(retmsg);
-        }
-    } else {
-        switch(wxmsg.MsgType) {
-            case 'image':
-            case 'voice':
-                retmsg.msg = wxmsg.MediaId;
-                retmsg.msgtype = wxmsg.MsgType;
-                break;
+//@param {object} wxmsg解析XML消息的对象
+//@param {object} retmsg要返回的数据对象
+function userMsg(wxmsg,retmsg){
+    //关键字自动回复
+    if(wxmsg.MsgType == 'text'){
+        switch(wxmsg.Content){
+            case '帮助':
+            case 'help':
+            case '?':
+            case '？':
+                retmsg.msg=help();
+                retmsg.msgtype='text';
+                return formatMsg(retmsg);
+            case 'about':
+                retmsg.msgtype='text';
+                retmsg.msg='我是这个测试号的开发者，如有问题，请发送至邮箱123456789@qq.com';
+                return formatMsg(retmsg);
+            case 'who':
+                retmsg.msgtype='text';
+                retmsg.msg='学生基本信息：姓名：牛玉欣 学号：2017011948 班级：6班';
+                return formatMsg(retmsg);
+            case 'hello':
+            case '你好':
+                retmsg.msgtype='text';
+                retmsg.msg='你好，你可以输入一些关键字测试消息回复，输入help/?获取帮助';
+                return formatMsg(retmsg);
             default:
-                retmsg.msg = '不支持的类型';
+                retmsg.msgtype='text';
+                retmsg.msg=wxmsg.Content;
+                return formatMsg(retmsg);
         }
-
-        return formatMsg(retmsg);
+    }
+    //处理其他类型的消息
+    switch (wxmsg.MsgType){
+        case 'image':
+        case 'voice':
+            retmsg.msgtype=wxmsg.MsgType;
+            retmsg.msg=wxmsg.MediaId;
+            return formatMsg(retmsg);
+        default:
+            //retmsg.msgtype类型为空
+            //格式化数据会返回default处的数据
+            //提示用户类型不被支持
+            return formatMsg(retmsg);
     }
 }
+exports.help=help;
+exports.userMsg=userMsg;
 
-exports.userMsg = userMsg;
-exports.help = help;
+// //后续还会加入事件消息指出
+// exports.msgDispatch = function msgDispatch(wxmsg, retmsg) {
+//     return userMsg(wxmsg, retmsg);
+// };
+function eventMsg(wxmsg,retmsg){
+    retmsg.msgtype = 'text';
+    switch (wxmsg.Event){
+        case 'subscribe':
+            retmsg.msg = '你好,这是一个测试号，尽管没什么用，但还是谢谢关注'
+            return formatMsg(retmsg);
+        case 'unsubscribe':
+            console.log(wxmsg.FromUserName,"取消关注");
+            break;
+        case 'CLICK':
+            retmsg.msg = wxmsg.EventKey;
+            return formatMsg(retmsg);
+        case 'VIEW':
+            console.log('用户浏览',wxmsg.EventKey);
+            break;
+        case 'pic_weixin':
+            retmsg.msgtype=wxmsg.MsgType;
+            retmsg.msg=wxmsg.MediaId;
+            return formatMsg(retmsg);  
+        case 'pic_sysphoto':
+            retmsg.msgtype=wxmsg.MsgType;
+            retmsg.msg=wxmsg.MediaId;
+            return formatMsg(retmsg); 
+        default:
+            return '';
+    }
+    return '';
+}
 
-exports.msgDispatch = function msgDispatch(wxmsg, retmsg) {
-    return userMsg(wxmsg, retmsg);
+exports.msgDispatch = function(wxmsg,retmsg){
+    if(wxmsg.MsgType == 'event'){
+        return eventMsg(wxmsg,retmsg);
+    }
+    return userMsg(wxmsg,retmsg);
 };
-
